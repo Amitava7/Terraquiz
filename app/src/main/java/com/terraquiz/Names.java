@@ -14,7 +14,10 @@ final class Names {
     private Names() {
     }
 
-    /** Lower case, accents removed, everything but letters and digits dropped. */
+    /**
+     * Lower case, accents removed, everything but letters and digits dropped,
+     * and a leading "the" along with them.
+     */
     static String normalise(String s) {
         String flat = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
         StringBuilder b = new StringBuilder(flat.length());
@@ -33,6 +36,11 @@ final class Names {
                 default: break;
             }
             if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) b.append(c);
+        }
+        // "The Gambia" and "the Bahamas" are the same answer as without it.
+        // No country name begins with those three letters, so this is safe.
+        if (b.length() > 3 && b.charAt(0) == 't' && b.charAt(1) == 'h' && b.charAt(2) == 'e') {
+            b.delete(0, 3);
         }
         return b.toString();
     }

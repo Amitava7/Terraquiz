@@ -55,7 +55,10 @@ def normalise(s):
         c = FOLD.get(c, c)
         if c.isascii() and (c.isalpha() or c.isdigit()):
             out.append(c)
-    return "".join(out)
+    flat = "".join(out)
+    if len(flat) > 3 and flat.startswith("the"):
+        flat = flat[3:]      # "The Gambia" is the same answer as "Gambia"
+    return flat
 
 
 def edit_distance(a, b):
@@ -112,6 +115,9 @@ TYPING_CASES = [
     ("Czech Republic", "Czechia", True),
     ("Bosnia", "Bosnia and Herzegovina", True),
     ("Zaire", "DR Congo", True),
+    ("The Gambia", "Gambia", True),
+    ("the Bahamas", "Bahamas", True),
+    ("The Netherlands", "Netherlands", True),
     # these must never pass: another country is at least as close
     ("Iraq", "Iran", False),
     ("Iran", "Iraq", False),
