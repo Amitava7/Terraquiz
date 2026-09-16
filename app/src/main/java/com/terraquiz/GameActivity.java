@@ -94,9 +94,12 @@ abstract class GameActivity extends Activity {
         info = Ui.text(this, "", 15f, Ui.TEXT, false);
         info.setLineSpacing(Ui.dp(this, 3), 1f);
         info.setVisibility(View.GONE);
+        // The panel grows with the hints and the map, which carries the
+        // weight, gives up the room; past a few hints the panel scrolls.
         ScrollView scroll = new ScrollView(this);
         scroll.addView(info);
-        panel.addView(scroll, Ui.lp(Ui.MATCH, Ui.WRAP));
+        panel.addView(scroll, Ui.lp(Ui.MATCH, Ui.WRAP, 0f));
+        scroll.setScrollbarFadingEnabled(true);
 
         controls = Ui.column(this);
         panel.addView(controls, Ui.lp(Ui.MATCH, Ui.WRAP));

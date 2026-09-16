@@ -70,6 +70,9 @@ final class MapView extends View {
     private final RectF visible = new RectF();
     private final RectF pill = new RectF();
 
+    private RectF pendingBox;     // a flyTo asked for before the view had a size
+    private float pendingPad;
+
     private GestureDetector gestures;
     private ScaleGestureDetector pinch;
     private OverScroller scroller;
@@ -141,12 +144,29 @@ final class MapView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int ow, int oh) {
         super.onSizeChanged(w, h, ow, oh);
-        if (world != null && ow == 0) fitAll();
+        if (world == null) return;
+        RectF e = world.extent;
+        minScale = Math.min(w / e.width(), h / e.height());
+        if (ow == 0) {
+            fitAll();
+        } else {
+            constrain();
+        }
+        if (pendingBox != null) {
+            RectF box = pendingBox;
+            pendingBox = null;
+            flyTo(box, pendingPad, false);
+        }
     }
 
     /** Pulls back to the whole world. */
     void flyHome(boolean animate) {
-        if (world == null || getWidth() == 0) return;
+        if (world == null) return;
+        if (getWidth() == 0) {
+            pendingBox = new RectF(world.extent);
+            pendingPad = 1f;
+            return;
+        }
         RectF e = world.extent;
         minScale = Math.min(getWidth() / e.width(), getHeight() / e.height());
         moveTo(e.centerX(), e.centerY(), minScale, animate);
@@ -164,7 +184,11 @@ final class MapView extends View {
 
     /** Frames a rectangle of the map, leaving room around it for context. */
     void flyTo(RectF box, float pad, boolean animate) {
-        if (getWidth() == 0 || getHeight() == 0) return;
+        if (getWidth() == 0 || getHeight() == 0) {
+            pendingBox = new RectF(box);   // replay it once we know our size
+            pendingPad = pad;
+            return;
+        }
         float w = Math.max(box.width(), 0.35f) * pad;
         float h = Math.max(box.height(), 0.35f) * pad;
         float target = Math.min(getWidth() / w, getHeight() / h);
