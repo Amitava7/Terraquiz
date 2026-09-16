@@ -59,6 +59,11 @@ final class MapView extends View {
     // Monaco or San Marino.
     private float maxScale = 2000f;
 
+    /** Below this many pixels per degree the map is drawn as one piece. */
+    private static final float COMBINED_BELOW = 14f;
+    /** At or above this, outlines are drawn at full detail. */
+    private static final float DETAIL_ABOVE = 60f;
+
     private final List<Mark> marks = new ArrayList<Mark>();
     private float hintX, hintY, hintRadius;   // "somewhere in here" circle, degrees
 
@@ -279,7 +284,13 @@ final class MapView extends View {
         if (world == null) return;
 
         visible.set(mapX(0), mapY(0), mapX(getWidth()), mapY(getHeight()));
-        boolean lod = scale < 14f;
+        // Three levels of detail. Zoomed right out the whole world is drawn
+        // from two combined paths. In between, per-country outlines are culled
+        // but still generalised - at these zooms the dropped points are within
+        // a few pixels. Close in, the full outlines, where culling means only
+        // a handful of countries are on screen anyway.
+        boolean whole = scale < COMBINED_BELOW;
+        boolean detailed = scale >= DETAIL_ABOVE;
 
         canvas.save();
         canvas.translate(getWidth() / 2f, getHeight() / 2f);
@@ -287,11 +298,11 @@ final class MapView extends View {
         canvas.translate(-cx, -cy);
 
         border.setStrokeWidth(1.1f * density / scale);
-        if (lod) {
+        if (whole) {
             // Zoomed out everything is on screen, so culling buys nothing and
             // the whole world goes down as two draw calls.
             canvas.drawPath(world.landCoarse, land);
-            drawMarkFills(canvas);
+            drawMarkFills(canvas, false);
             canvas.drawPath(world.borderCoarse, border);
         } else {
             shown.clear();
@@ -300,19 +311,21 @@ final class MapView extends View {
                 if (RectF.intersects(c.bounds, visible)) shown.add(c);
             }
             for (int i = 0; i < shown.size(); i++) {
-                canvas.drawPath(shown.get(i).path, land);
+                Country c = shown.get(i);
+                canvas.drawPath(detailed ? c.path : c.coarse, land);
             }
-            drawMarkFills(canvas);
+            drawMarkFills(canvas, detailed);
             // borders last, so no neighbour's fill paints over them
             for (int i = 0; i < shown.size(); i++) {
-                canvas.drawPath(shown.get(i).path, border);
+                Country c = shown.get(i);
+                canvas.drawPath(detailed ? c.path : c.coarse, border);
             }
         }
         markLine.setStrokeWidth(2.4f * density / scale);
         for (int i = 0; i < marks.size(); i++) {
             Mark m = marks.get(i);
             markLine.setColor(m.outline);
-            canvas.drawPath(m.country.path, markLine);
+            canvas.drawPath(detailed ? m.country.path : m.country.coarse, markLine);
         }
         canvas.restore();
 
@@ -325,11 +338,16 @@ final class MapView extends View {
         }
     }
 
-    private void drawMarkFills(Canvas canvas) {
+    /**
+     * Fills the marked countries. The outline used has to match the one the
+     * land underneath was drawn with, or the highlight shows a fringe of
+     * colour where the two disagree.
+     */
+    private void drawMarkFills(Canvas canvas, boolean detailed) {
         for (int i = 0; i < marks.size(); i++) {
             Mark m = marks.get(i);
             markFill.setColor(m.fill);
-            canvas.drawPath(m.country.path, markFill);
+            canvas.drawPath(detailed ? m.country.path : m.country.coarse, markFill);
         }
     }
 

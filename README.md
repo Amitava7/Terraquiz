@@ -35,6 +35,11 @@ trouble it has given you. New countries filter in between the two. Each game
 keeps its own record, and "Your progress" shows how many of the 193 you have
 nailed and which ones are coming back soon.
 
+A fresh install has nothing to go on, so the order starts from how likely a
+country is to be recognised — the better of its population and area ranking.
+The first game asks about Russia, China, India and the United States; Nauru,
+San Marino and Vatican City wait at the far end until the rest are learned.
+
 Progress lives in a small SQLite database on the phone. Nothing is uploaded;
 the app asks for no permissions and has no network code in it.
 
@@ -64,7 +69,15 @@ compatibility code for anything older.
 | No XML layouts | Screens are built in code; the only resources are a theme, three colours and a vector icon. |
 | R8 + one locale | Minified and shrunk, English only, no per-density copies, no dependency metadata block. |
 
-CI fails the build if the APK ever grows past 1.5 MB.
+The release APK comes out around 240 KB, and CI fails the build if it ever
+passes 1.5 MB.
+
+Drawing keeps up by switching detail with the zoom: zoomed right out the world
+is two paths — one fill, one stroke over the shared border arcs — so it costs
+two draw calls; in the middle zooms each country is drawn separately but
+generalised, with anything off screen skipped; close in, the full outlines.
+Border strokes are divided by the zoom before drawing, so they stay a crisp
+hairline whether you are looking at the whole world or at Luxembourg.
 
 ## The map data
 
@@ -77,11 +90,13 @@ python3 tools/dump_data.py France Japan  # read it back, print facts and hints
 cd tools && python3 check_data.py        # the checks CI runs
 ```
 
-`check_data.py` re-implements the loader's geometry in Python and asserts that
-every ring closes, that no outline wraps across the antimeridian once split,
-that every label point lands inside its own country and inside no other, that
-bounding boxes really bound, and that no two countries answer to the same typed
-name.
+`check_data.py` re-implements the loader's geometry and the app's spelling
+rules in Python, and asserts that every ring closes, that no outline wraps
+across the antimeridian once split, that every label point lands inside its own
+country and inside no other, that bounding boxes really bound, that no two
+countries answer to the same typed name, and that 33 worked typing cases come
+out right — "Phillipines" accepted for the Philippines, "Iraq" never accepted
+for Iran.
 
 Sources, all public:
 
@@ -95,6 +110,18 @@ Sources, all public:
 Facts are generated from those fields rather than written by hand, so all 1,930
 of them say something the data actually supports.
 
+## What CI does
+
+1. **Check map data** — runs `tools/check_data.py` against the committed asset.
+2. **Build release APK** — assembles, signs, prints a size breakdown in the job
+   summary and fails past the size budget.
+3. **Launch on an emulator** — installs the APK on Android 14, opens all four
+   screens, plays a round of each game by finding the buttons in the view
+   hierarchy, and fails on any crash. It also prints the map as ASCII in the
+   log (`tools/screen_ascii.py`) and checks the map area really is mostly ocean
+   with a sensible amount of land and visible borders, so a blank or broken map
+   cannot pass.
+
 ## Layout
 
 ```
@@ -107,7 +134,12 @@ app/src/main/java/com/terraquiz/
   GameActivity.java  shared game scaffolding
   FindActivity.java  game 1      NameActivity.java  game 2
   MainActivity.java  menu        StatsActivity.java progress
-tools/               data pipeline and its checks
+tools/
+  build_data.py      builds world.bin from the public sources
+  check_data.py      the geometry, content and spelling checks CI runs
+  dump_data.py       reads world.bin back and prints it
+  smoke_test.sh      drives the APK on an emulator
+  screen_ascii.py    turns a screenshot into ASCII for the CI log
 ```
 
 ## Building locally

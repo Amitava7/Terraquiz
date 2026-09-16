@@ -175,18 +175,22 @@ final class World {
             List<float[]> rings = new ArrayList<float[]>();
             Path path = new Path();
             path.setFillType(Path.FillType.EVEN_ODD);
+            Path coarse = new Path();
+            coarse.setFillType(Path.FillType.EVEN_ODD);
             for (int p = 0; p < polyCount; p++) {
                 int ringCount = r.uvar();
                 for (int g = 0; g < ringCount; g++) {
                     for (float[] ring : splitAtDateline(assemble(arcs, r), true)) {
                         rings.add(ring);
                         addRing(path, ring, 0f, true);
+                        addRing(coarse, ring, COARSE, true);
                         addRing(w.landCoarse, ring, COARSE, true);
                     }
                 }
             }
             c.rings = rings.toArray(new float[rings.size()][]);
             c.path = path;
+            c.coarse = coarse;
             c.facts = new String[r.uvar()];
             for (int j = 0; j < c.facts.length; j++) c.facts[j] = r.text();
             c.hints = new String[r.uvar()];
@@ -311,7 +315,7 @@ final class World {
      * is dropped from the zoomed-out copy. At the zoom where the whole world
      * fits on a phone this is under a pixel.
      */
-    private static final float COARSE = 0.22f;
+    static final float COARSE = 0.22f;
 
     /**
      * Adds a line, dropping points closer together than {@code skip} degrees.

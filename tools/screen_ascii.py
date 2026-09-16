@@ -14,16 +14,29 @@ import argparse
 import struct
 import sys
 
-# The app's palette, from Ui.java. Anything else is called "other".
+LAND = (0x23, 0x38, 0x4A)
+
+
+def over_land(rgb, alpha):
+    """A highlight fill is translucent, so on screen it is this blend."""
+    return tuple(int(round(c * alpha + l * (1 - alpha))) for c, l in zip(rgb, LAND))
+
+
+# The app's palette, from Ui.java. Highlights appear twice: the solid outline
+# colour and the translucent fill over land, both counted under one name.
+# Anything far from all of these is called "other".
 PALETTE = [
     ("ocean", (0x07, 0x14, 0x1F), "."),
-    ("land", (0x23, 0x38, 0x4A), "#"),
+    ("land", LAND, "#"),
     ("border", (0x7A, 0xA1, 0xBE), "+"),
     ("bg", (0x0B, 0x11, 0x18), " "),
     ("panel", (0x12, 0x1C, 0x26), ","),
     ("green", (0x2F, 0xBF, 0x71), "G"),
+    ("green", over_land((0x2F, 0xBF, 0x71), 0xAA / 255.0), "g"),
     ("amber", (0xF0, 0xB4, 0x29), "A"),
+    ("amber", over_land((0xF0, 0xB4, 0x29), 0x99 / 255.0), "a"),
     ("red", (0xE5, 0x54, 0x4B), "R"),
+    ("red", over_land((0xE5, 0x54, 0x4B), 0xAA / 255.0), "r"),
     ("accent", (0x3D, 0x9B, 0xE9), "B"),
     ("text", (0xE7, 0xEF, 0xF6), "T"),
 ]
@@ -50,7 +63,7 @@ def classify(r, g, b):
             best_d = d
             best = (name, ch)
     # far from everything in the palette: call it what it is
-    if best_d > 4000:
+    if best_d > 2600:
         return "other", "?"
     return best
 

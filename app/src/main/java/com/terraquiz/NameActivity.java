@@ -21,7 +21,6 @@ public final class NameActivity extends GameActivity {
 
     private EditText input;
     private Button check;
-    private int revealed;
 
     @Override
     int mode() {
@@ -72,7 +71,6 @@ public final class NameActivity extends GameActivity {
 
     @Override
     void startQuestion() {
-        revealed = 0;
         title.setText("Which country is this?");
         say("Type its name. Spelling can be a bit off.", Ui.DIM);
         input.setText("");
@@ -102,16 +100,17 @@ public final class NameActivity extends GameActivity {
         }
     }
 
+    /** Hint number {@code index} uncovers {@code index + 1} letters. */
     @Override
     boolean showHint(int index) {
         int letters = Names.letterCount(target.name);
-        if (revealed >= letters - 1) {
+        int reveal = index + 1;
+        if (reveal > letters - 1) {   // never give away the last letter
             say("That is as much as the hints will give away.", Ui.DIM);
             return false;
         }
-        revealed++;
-        showInfo(Names.mask(target.name, revealed), Ui.AMBER);
-        say("Hint " + revealed + " of " + (letters - 1), Ui.AMBER);
+        showInfo(Names.mask(target.name, reveal), Ui.AMBER);
+        say("Hint " + reveal + " of " + (letters - 1), Ui.AMBER);
         return true;
     }
 
