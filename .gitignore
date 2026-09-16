@@ -1,0 +1,13 @@
+# Gradle / Android build output
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Source geodata downloaded by tools/build_data.py --download.
+# The generated app/src/main/assets/world.bin is committed instead.
+tools/cache/
+__pycache__/

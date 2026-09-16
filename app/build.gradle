@@ -1,0 +1,80 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing is driven by -P properties so CI can pass a keystore in
+// without anything secret living in the repository.
+def storeFilePath = findProperty('tqStoreFile')
+
+android {
+    namespace 'com.terraquiz'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.terraquiz'
+        // The Galaxy S24 Ultra shipped on Android 14. Nothing older is
+        // supported, which keeps the compatibility code out of the APK.
+        minSdk 34
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        resourceConfigurations += ['en']
+    }
+
+    signingConfigs {
+        if (storeFilePath) {
+            create('release') {
+                storeFile file(storeFilePath)
+                storePassword findProperty('tqStorePassword')
+                keyAlias findProperty('tqKeyAlias')
+                keyPassword findProperty('tqKeyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
+            if (storeFilePath) {
+                signingConfig signingConfigs.getByName('release')
+            }
+        }
+        debug {
+            applicationIdSuffix '.debug'
+        }
+    }
+
+    // Everything below is about keeping the APK small: no generated
+    // BuildConfig, no resource values we never read, no dependency metadata
+    // block, and no per-density or per-language resource copies.
+    buildFeatures {
+        buildConfig false
+        resValues false
+        shaders false
+        aidl false
+    }
+
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        encoding 'UTF-8'
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+// No libraries at all: the app is written against the Android framework only,
+// so there is no support library, no Kotlin runtime and nothing to shrink away.
+dependencies {
+}
