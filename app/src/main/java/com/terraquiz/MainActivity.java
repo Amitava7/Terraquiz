@@ -39,7 +39,7 @@ public final class MainActivity extends Activity {
                 "A country lights up, and you type what it is called.", NameActivity.class));
         root.addView(gap());
 
-        Button stats = Ui.button(this, "Your progress", Ui.PANEL, Ui.TEXT);
+        Button stats = Ui.button(this, "Your progress", Ui.BUTTON, Ui.TEXT);
         stats.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, StatsActivity.class));

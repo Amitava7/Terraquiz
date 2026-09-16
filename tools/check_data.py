@@ -6,6 +6,7 @@ they catch a broken asset before it ever reaches a phone. Run in CI.
 """
 
 import sys
+import unicodedata
 
 from build_data import split_at_dateline
 from dump_data import load
@@ -32,6 +33,117 @@ def point_in_rings(px, py, rings):
                 inside = not inside
             j = i
     return inside
+
+
+# --------------------------------------------------------------------------
+# A mirror of Names.java, so the rules the app answers by are pinned down here
+# --------------------------------------------------------------------------
+
+FOLD = {"\u00f8": "o", "\u0111": "d", "\u0142": "l", "\u00fe": "t", "\u00f0": "d"}
+SPLIT = {"\u00e6": "ae", "\u0153": "oe", "\u00df": "ss"}
+
+
+def normalise(s):
+    out = []
+    for ch in unicodedata.normalize("NFD", s):
+        c = ch.lower()
+        if 0x300 <= ord(c) <= 0x36F:
+            continue
+        if c in SPLIT:
+            out.append(SPLIT[c])
+            continue
+        c = FOLD.get(c, c)
+        if c.isascii() and (c.isalpha() or c.isdigit()):
+            out.append(c)
+    return "".join(out)
+
+
+def edit_distance(a, b):
+    prev = list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        cur = [i] + [0] * len(b)
+        for j in range(1, len(b) + 1):
+            cur[j] = min(cur[j - 1] + 1, prev[j] + 1,
+                         prev[j - 1] + (a[i - 1] != b[j - 1]))
+        prev = cur
+    return prev[len(b)]
+
+
+def tolerance(n):
+    return 1 if n <= 6 else (2 if n <= 12 else 3)
+
+
+def closeness(guess, c):
+    return min([edit_distance(guess, normalise(c["name"]))]
+               + [edit_distance(guess, normalise(a)) for a in c["aliases"]])
+
+
+def accepts(typed, target, others):
+    guess = normalise(typed)
+    if not guess:
+        return False
+    mine = closeness(guess, target)
+    if mine == 0:
+        return True
+    if mine > tolerance(len(guess)):
+        return False
+    return all(closeness(guess, o) > mine for o in others if o is not target)
+
+
+# typed, the country it is meant to name, whether it should be accepted
+TYPING_CASES = [
+    ("Phillipines", "Philippines", True),
+    ("Kazakstan", "Kazakhstan", True),
+    ("Madgascar", "Madagascar", True),
+    ("Kyrgistan", "Kyrgyzstan", True),
+    ("Liechtenstien", "Liechtenstein", True),
+    ("Argentinia", "Argentina", True),
+    ("Jappan", "Japan", True),
+    ("Cubaa", "Cuba", True),
+    ("cuba", "Cuba", True),
+    ("Turkey", "T\u00fcrkiye", True),
+    ("Sao Tome and Principe", "S\u00e3o Tom\u00e9 and Pr\u00edncipe", True),
+    ("Holland", "Netherlands", True),
+    ("USA", "United States", True),
+    ("America", "United States", True),
+    ("UK", "United Kingdom", True),
+    ("England", "United Kingdom", True),
+    ("Burma", "Myanmar", True),
+    ("Czech Republic", "Czechia", True),
+    ("Bosnia", "Bosnia and Herzegovina", True),
+    ("Zaire", "DR Congo", True),
+    # these must never pass: another country is at least as close
+    ("Iraq", "Iran", False),
+    ("Iran", "Iraq", False),
+    ("Niger", "Nigeria", False),
+    ("Nigeria", "Niger", False),
+    ("Austria", "Australia", False),
+    ("Australia", "Austria", False),
+    ("Zambia", "Gambia", False),
+    ("Mali", "Malta", False),
+    ("Chile", "China", False),
+    ("Guinea", "Guyana", False),
+    ("Slovakia", "Slovenia", False),
+    ("North Korea", "South Korea", False),
+    ("Sudan", "South Sudan", False),
+]
+
+
+def check_typing(quiz, fails):
+    by_name = {c["name"]: c for c in quiz}
+    for typed, name, want in TYPING_CASES:
+        target = by_name.get(name)
+        if target is None:
+            fails.append("typing test names %r, which is not a country" % name)
+            continue
+        if accepts(typed, target, quiz) != want:
+            fails.append("typing %r for %s should%s be accepted"
+                         % (typed, name, "" if want else " not"))
+    # whatever a country is called, typing that must name it
+    for c in quiz:
+        for nm in [c["name"]] + c["aliases"]:
+            if not accepts(nm, c, quiz):
+                fails.append("%s does not accept its own name %r" % (c["name"], nm))
 
 
 def to_map(pts, tr):
@@ -131,7 +243,10 @@ def main():
                 fails.append("%s and %s both answer to %r" % (seen[k], c["name"], nm))
             seen[k] = c["name"]
 
-    print("%d countries, %d quizzable, %d arcs" % (len(countries), len(quiz), len(arcs)))
+    check_typing(quiz, fails)
+
+    print("%d countries, %d quizzable, %d arcs, %d typing cases"
+          % (len(countries), len(quiz), len(arcs), len(TYPING_CASES)))
     if fails:
         print("\n%d problem(s):" % len(fails))
         for f in sorted(set(fails)):

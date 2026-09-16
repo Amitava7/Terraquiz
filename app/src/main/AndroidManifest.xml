@@ -20,11 +20,13 @@
 
         <activity
             android:name=".FindActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".NameActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="false"
             android:parentActivityName=".MainActivity"
             android:windowSoftInputMode="adjustResize" />

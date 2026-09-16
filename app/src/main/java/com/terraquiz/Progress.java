@@ -139,17 +139,15 @@ final class Progress extends SQLiteOpenHelper {
                         mode, c.key()});
     }
 
-    void reset(int mode) {
-        getWritableDatabase().delete("p", "mode=?", new String[]{String.valueOf(mode)});
-    }
-
     void resetAll() {
         getWritableDatabase().delete("p", null, null);
     }
 
     static final class Summary {
         int known;       // answered first time at least once
-        int attempted;
+        int attempted;   // distinct countries seen
+        int asked;       // questions put
+        int solved;      // questions answered without giving up
         int firsts;
         int misses;
         int total;
@@ -168,6 +166,8 @@ final class Progress extends SQLiteOpenHelper {
             Row r = rows.get(c.key());
             if (r == null) continue;
             s.attempted++;
+            s.asked += r.seen;
+            s.solved += r.solved;
             s.firsts += r.firsts;
             s.misses += r.misses;
             if (r.cycle > 0) s.known++;

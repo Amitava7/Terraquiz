@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -106,8 +105,8 @@ abstract class GameActivity extends Activity {
 
         LinearLayout buttons = Ui.row(this);
         buttons.setPadding(0, Ui.dp(this, 10), 0, 0);
-        hintBtn = Ui.button(this, "Hint", Ui.PANEL, Ui.AMBER);
-        revealBtn = Ui.button(this, "Give up", Ui.PANEL, Ui.DIM);
+        hintBtn = Ui.button(this, "Hint", Ui.BUTTON, Ui.AMBER);
+        revealBtn = Ui.button(this, "Give up", Ui.BUTTON, Ui.DIM);
         nextBtn = Ui.button(this, "Next ›", Ui.ACCENT, 0xFF06121C);
         hintBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {

@@ -54,7 +54,10 @@ final class MapView extends View {
     private float cx, cy;        // map point at the centre of the view
     private float scale = 1f;    // pixels per degree
     private float minScale = 1f;
-    private float maxScale = 260f;
+    // Pixels per degree. The ceiling is high on purpose: at 2000 a phone screen
+    // covers well under a degree, which is what it takes to put a finger on
+    // Monaco or San Marino.
+    private float maxScale = 2000f;
 
     private final List<Mark> marks = new ArrayList<Mark>();
     private float hintX, hintY, hintRadius;   // "somewhere in here" circle, degrees
@@ -283,31 +286,33 @@ final class MapView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-cx, -cy);
 
-        shown.clear();
-        for (int i = 0, n = world.countries.size(); i < n; i++) {
-            Country c = world.countries.get(i);
-            if (RectF.intersects(c.bounds, visible)) shown.add(c);
-        }
-        for (int i = 0; i < shown.size(); i++) {
-            Country c = shown.get(i);
-            canvas.drawPath(lod ? c.coarse : c.path, land);
-        }
-        // marked countries are filled over the top, then everything is outlined
-        for (int i = 0; i < marks.size(); i++) {
-            Mark m = marks.get(i);
-            markFill.setColor(m.fill);
-            canvas.drawPath(lod ? m.country.coarse : m.country.path, markFill);
-        }
         border.setStrokeWidth(1.1f * density / scale);
-        for (int i = 0; i < shown.size(); i++) {
-            Country c = shown.get(i);
-            canvas.drawPath(lod ? c.coarse : c.path, border);
+        if (lod) {
+            // Zoomed out everything is on screen, so culling buys nothing and
+            // the whole world goes down as two draw calls.
+            canvas.drawPath(world.landCoarse, land);
+            drawMarkFills(canvas);
+            canvas.drawPath(world.borderCoarse, border);
+        } else {
+            shown.clear();
+            for (int i = 0, n = world.countries.size(); i < n; i++) {
+                Country c = world.countries.get(i);
+                if (RectF.intersects(c.bounds, visible)) shown.add(c);
+            }
+            for (int i = 0; i < shown.size(); i++) {
+                canvas.drawPath(shown.get(i).path, land);
+            }
+            drawMarkFills(canvas);
+            // borders last, so no neighbour's fill paints over them
+            for (int i = 0; i < shown.size(); i++) {
+                canvas.drawPath(shown.get(i).path, border);
+            }
         }
         markLine.setStrokeWidth(2.4f * density / scale);
         for (int i = 0; i < marks.size(); i++) {
             Mark m = marks.get(i);
             markLine.setColor(m.outline);
-            canvas.drawPath(lod ? m.country.coarse : m.country.path, markLine);
+            canvas.drawPath(m.country.path, markLine);
         }
         canvas.restore();
 
@@ -317,6 +322,14 @@ final class MapView extends View {
         for (int i = 0; i < marks.size(); i++) {
             Mark m = marks.get(i);
             if (m.label != null) drawLabel(canvas, m);
+        }
+    }
+
+    private void drawMarkFills(Canvas canvas) {
+        for (int i = 0; i < marks.size(); i++) {
+            Mark m = marks.get(i);
+            markFill.setColor(m.fill);
+            canvas.drawPath(m.country.path, markFill);
         }
     }
 
@@ -402,7 +415,7 @@ final class MapView extends View {
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            float target = scale >= maxScale * 0.6f ? minScale : scale * 2.6f;
+            float target = scale >= maxScale * 0.5f ? minScale : scale * 4f;
             float fx = mapX(e.getX()), fy = mapY(e.getY());
             moveTo((cx + fx) / 2, (cy + fy) / 2, clamp(target, minScale, maxScale), true);
             return true;

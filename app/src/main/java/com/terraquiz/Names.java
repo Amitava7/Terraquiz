@@ -62,9 +62,12 @@ final class Names {
         return prev[m];
     }
 
-    /** Edits tolerated for a name of this length. */
+    /**
+     * Edits tolerated for a guess of this length. Short names get a free edit
+     * too: the "nobody else is closer" rule in {@link #accepts} is what keeps
+     * Iraq and Iran apart, not strictness about spelling.
+     */
     static int tolerance(int len) {
-        if (len <= 4) return 0;
         if (len <= 6) return 1;
         if (len <= 12) return 2;
         return 3;

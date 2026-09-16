@@ -22,8 +22,8 @@ final class Country {
     final RectF mainBounds = new RectF();  // the largest single landmass
 
     float[][] rings;      // flat x,y pairs, one array per ring
-    Path path;            // full detail
-    Path coarse;          // decimated, used when zoomed out
+    Path path;            // full detail; the zoomed-out map is drawn from
+                          // World.landCoarse instead
 
     /** Key used in the progress database. Stable across data rebuilds. */
     String key() {

@@ -22,6 +22,7 @@ final class Ui {
     static final int BORDER = 0xFF7AA1BE;
     static final int BG = 0xFF0B1118;
     static final int PANEL = 0xFF121C26;
+    static final int BUTTON = 0xFF1E2E3D;   // reads as a button against PANEL
     static final int TEXT = 0xFFE7EFF6;
     static final int DIM = 0xFF9BB0C2;
     static final int GREEN = 0xFF2FBF71;

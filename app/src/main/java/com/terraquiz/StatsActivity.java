@@ -32,7 +32,7 @@ public final class StatsActivity extends Activity {
         scroll.addView(body);
         root.addView(scroll, Ui.lp(Ui.MATCH, 0, 1f));
 
-        Button reset = Ui.button(this, "Start over", Ui.PANEL, Ui.RED);
+        Button reset = Ui.button(this, "Start over", Ui.BUTTON, Ui.RED);
         reset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 confirmReset();
@@ -72,7 +72,9 @@ public final class StatsActivity extends Activity {
         card.setPadding(p, p, p, p);
         card.addView(Ui.text(this, title, 19f, Ui.ACCENT, true));
         card.addView(line("Known first try", s.known + " of " + s.total + " countries"));
-        card.addView(line("Countries seen", String.valueOf(s.attempted)));
+        card.addView(line("Countries met", String.valueOf(s.attempted)));
+        card.addView(line("Questions asked", String.valueOf(s.asked)));
+        card.addView(line("Answered", String.valueOf(s.solved)));
         card.addView(line("Right first time", String.valueOf(s.firsts)));
         card.addView(line("Wrong answers", String.valueOf(s.misses)));
         if (!s.weakest.isEmpty()) {

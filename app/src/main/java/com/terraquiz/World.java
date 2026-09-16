@@ -28,6 +28,15 @@ final class World {
     /** Full extent of the map in map units (x = lon, y = -lat). */
     final RectF extent = new RectF();
 
+    /**
+     * The whole world as two paths, generalised for the zoomed-out view: every
+     * country's outline in one fill, and every border segment in one stroke.
+     * Zoomed out there is nothing to cull, so this turns hundreds of draw calls
+     * into two, and each shared border is stroked once instead of twice.
+     */
+    final Path landCoarse = new Path();
+    final Path borderCoarse = new Path();
+
     static void preload(final Context ctx) {
         final Context app = ctx.getApplicationContext();
         synchronized (LOCK) {
@@ -136,6 +145,13 @@ final class World {
         }
 
         World w = new World();
+        w.landCoarse.setFillType(Path.FillType.EVEN_ODD);
+        for (int a = 0; a < arcCount; a++) {
+            // arcs wrap the globe just as rings do, so they get cut the same way
+            for (float[] part : splitAtDateline(arcs[a], false)) {
+                addRing(w.borderCoarse, part, COARSE, false);
+            }
+        }
         int count = r.uvar();
         w.extent.set(Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
         for (int i = 0; i < count; i++) {
@@ -159,21 +175,18 @@ final class World {
             List<float[]> rings = new ArrayList<float[]>();
             Path path = new Path();
             path.setFillType(Path.FillType.EVEN_ODD);
-            Path coarse = new Path();
-            coarse.setFillType(Path.FillType.EVEN_ODD);
             for (int p = 0; p < polyCount; p++) {
                 int ringCount = r.uvar();
                 for (int g = 0; g < ringCount; g++) {
-                    for (float[] ring : splitAtDateline(assemble(arcs, r))) {
+                    for (float[] ring : splitAtDateline(assemble(arcs, r), true)) {
                         rings.add(ring);
-                        addRing(path, ring, 0f);
-                        addRing(coarse, ring, 0.22f);
+                        addRing(path, ring, 0f, true);
+                        addRing(w.landCoarse, ring, COARSE, true);
                     }
                 }
             }
             c.rings = rings.toArray(new float[rings.size()][]);
             c.path = path;
-            c.coarse = coarse;
             c.facts = new String[r.uvar()];
             for (int j = 0; j < c.facts.length; j++) c.facts[j] = r.text();
             c.hints = new String[r.uvar()];
@@ -229,10 +242,12 @@ final class World {
      * wraps their longitudes back to the other end of the scale. Left alone,
      * the step from +179.9 to -180 draws a line clean across the map and makes
      * the country "contain" everything between. So cut every ring where it
-     * wraps, insert the point where it meets the edge of the map, and close
-     * each piece along that edge.
+     * wraps and insert the point where it meets the edge of the map.
+     *
+     * @param closed true for a country outline, which is a loop, false for a
+     *               border arc, which is not.
      */
-    private static List<float[]> splitAtDateline(float[] ring) {
+    private static List<float[]> splitAtDateline(float[] ring, boolean closed) {
         List<float[]> out = new ArrayList<float[]>(1);
         int n = ring.length;
         boolean wraps = false;
@@ -272,8 +287,9 @@ final class World {
         }
         pieces.add(cur);
 
-        // The ring is a loop, so its last piece runs into its first one.
-        if (pieces.size() > 1) {
+        // A ring is a loop, so its last piece runs into its first one. An open
+        // border arc has no such join and its pieces stand alone.
+        if (closed && pieces.size() > 1) {
             List<Float> last = pieces.remove(pieces.size() - 1);
             List<Float> first = pieces.get(0);
             last.addAll(first.subList(2, first.size()));
@@ -281,7 +297,7 @@ final class World {
         }
         for (int i = 0; i < pieces.size(); i++) {
             List<Float> p = pieces.get(i);
-            if (p.size() < 6) continue;            // nothing to fill
+            if (p.size() < (closed ? 6 : 4)) continue;   // nothing left to draw
             float[] arr = new float[p.size()];
             for (int k = 0; k < arr.length; k++) arr[k] = p.get(k);
             out.add(arr);
@@ -291,13 +307,20 @@ final class World {
     }
 
     /**
-     * Adds a ring, optionally dropping points closer together than {@code skip}
-     * degrees. The decimated copy is what gets drawn when the whole world is on
-     * screen, where the detail is far below one pixel anyway.
+     * How close together two points have to be, in degrees, before one of them
+     * is dropped from the zoomed-out copy. At the zoom where the whole world
+     * fits on a phone this is under a pixel.
      */
-    private static void addRing(Path path, float[] ring, float skip) {
+    private static final float COARSE = 0.22f;
+
+    /**
+     * Adds a line, dropping points closer together than {@code skip} degrees.
+     * {@code close} joins the last point back to the first, which is what an
+     * outline wants and a border arc does not.
+     */
+    private static void addRing(Path path, float[] ring, float skip, boolean close) {
         int n = ring.length;
-        if (n < 6) return;
+        if (n < 4) return;
         path.moveTo(ring[0], ring[1]);
         float lx = ring[0], ly = ring[1];
         int drawn = 1;
@@ -312,8 +335,8 @@ final class World {
             ly = y;
             drawn++;
         }
-        if (drawn < 3) path.lineTo(ring[n - 2], ring[n - 1]);
-        path.close();
+        if (drawn < 2) path.lineTo(ring[n - 2], ring[n - 1]);
+        if (close) path.close();
     }
 
     private static byte[] readAsset(Context ctx, String name) throws IOException {
