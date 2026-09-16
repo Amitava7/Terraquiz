@@ -69,6 +69,9 @@ final class MapView extends View {
 
     private final RectF visible = new RectF();
     private final RectF pill = new RectF();
+    // reused every frame: panning should not make work for the collector
+    private final List<Country> shown = new ArrayList<Country>(64);
+    private final Paint.FontMetrics metrics = new Paint.FontMetrics();
 
     private RectF pendingBox;     // a flyTo asked for before the view had a size
     private float pendingPad;
@@ -280,7 +283,7 @@ final class MapView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-cx, -cy);
 
-        List<Country> shown = new ArrayList<Country>(64);
+        shown.clear();
         for (int i = 0, n = world.countries.size(); i < n; i++) {
             Country c = world.countries.get(i);
             if (RectF.intersects(c.bounds, visible)) shown.add(c);
@@ -322,8 +325,9 @@ final class MapView extends View {
         float y = clamp(screenY(m.country.labelY), 24 * density, getHeight() - 8 * density);
         float w = labelText.measureText(m.label);
         float padX = 8 * density, padY = 5 * density;
-        Paint.FontMetrics fm = labelText.getFontMetrics();
-        pill.set(x - w / 2 - padX, y + fm.top - padY, x + w / 2 + padX, y + fm.bottom + padY);
+        labelText.getFontMetrics(metrics);
+        pill.set(x - w / 2 - padX, y + metrics.top - padY,
+                x + w / 2 + padX, y + metrics.bottom + padY);
         canvas.drawRoundRect(pill, 6 * density, 6 * density, labelBg);
         labelText.setColor(m.labelColor);
         canvas.drawText(m.label, x, y, labelText);

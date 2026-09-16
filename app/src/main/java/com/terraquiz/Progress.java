@@ -109,6 +109,8 @@ final class Progress extends SQLiteOpenHelper {
                 if (sa != sb) return sb - sa;
                 long la = ra == null ? 0 : ra.last, lb = rb == null ? 0 : rb.last;
                 if (la != lb) return la < lb ? -1 : 1;
+                // nothing to go on yet: best known countries first
+                if (a.fame != b.fame) return a.fame - b.fame;
                 return a.name.compareTo(b.name);
             }
         });

@@ -149,40 +149,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            set -eux
-            mkdir -p shots
-            adb install -r apk/*.apk
-            adb root
-            adb wait-for-device
-            sleep 5
-            for SCREEN in MainActivity FindActivity NameActivity StatsActivity; do
-              adb logcat -c
-              adb shell am start -W -n com.terraquiz/.$SCREEN
-              sleep 8
-              adb exec-out screencap -p > "shots/$SCREEN.png"
-              if adb logcat -d | grep -q "FATAL EXCEPTION"; then
-                echo "::error::$SCREEN crashed"
-                adb logcat -d | grep -A 40 "FATAL EXCEPTION"
-                exit 1
-              fi
-            done
-            # Play one round of game 1: tap around the middle of the map and
-            # make sure a wrong guess does not take the app down.
-            adb shell am start -n com.terraquiz/.FindActivity
-            sleep 6
-            adb logcat -c
-            adb shell input tap 540 900
-            sleep 2
-            adb exec-out screencap -p > shots/FindActivity-tapped.png
-            adb shell input tap 200 1950
-            sleep 2
-            adb exec-out screencap -p > shots/FindActivity-hint.png
-            if adb logcat -d | grep -q "FATAL EXCEPTION"; then
-              echo "::error::tapping the map crashed"
-              adb logcat -d | grep -A 40 "FATAL EXCEPTION"
-              exit 1
-            fi
+          script: bash tools/smoke_test.sh
 
       - uses: actions/upload-artifact@v4
         if: always()

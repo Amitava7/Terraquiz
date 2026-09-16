@@ -39,7 +39,7 @@ SOURCES = {
     "ne50_marine.geojson": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_geography_marine_polys.geojson",
 }
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 
 # --------------------------------------------------------------------------
@@ -552,6 +552,19 @@ def build():
     n_area = len(by_area)
     n_pop = len(by_pop)
 
+    # Before the app knows anything about the player it has to order the
+    # countries somehow, and alphabetical would be a strange way to learn. Rank
+    # them by how likely they are to be recognised - big by population or big
+    # by area counts - so the first games are winnable and the obscure ones
+    # arrive once the famous ones have been mastered.
+    def notability(c):
+        return min(c.get("pop_rank", 999), c.get("area_rank", 999))
+
+    for i, c in enumerate(sorted(quiz, key=notability)):
+        c["fame"] = min(i, 254)
+    for c in countries:
+        c.setdefault("fame", 255)
+
     name_by_a3 = {c["a3"]: c["name"] for c in countries}
     idx_by_a3 = {c["a3"]: i for i, c in enumerate(countries)}
 
@@ -807,6 +820,7 @@ def write_binary(countries, arcs, transform):
         w.text(cc["name"])
         flags = (1 if cc["quiz"] else 0) | (2 if cc["sovereign"] else 0)
         w.u8(flags)
+        w.u8(cc["fame"])
         w.text(cc["a2"])
         w.text(cc["sovereign"])
         w.uvar(len(cc["aliases"]))

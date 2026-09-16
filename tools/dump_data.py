@@ -70,6 +70,7 @@ def load():
     for _ in range(r.uvar()):
         c = {"name": r.text()}
         c["flags"] = r.u8()
+        c["fame"] = r.u8()
         c["a2"] = r.text()
         c["sovereign"] = r.text()
         c["aliases"] = [r.text() for _ in range(r.uvar())]

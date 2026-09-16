@@ -115,7 +115,7 @@ final class World {
     private static World load(Context ctx) throws IOException {
         byte[] data = readAsset(ctx, "world.bin");
         Reader r = new Reader(data);
-        if (r.u8() != 'T' || r.u8() != 'Q' || r.u8() != 'D' || r.u8() != 1) {
+        if (r.u8() != 'T' || r.u8() != 'Q' || r.u8() != 'D' || r.u8() != 2) {
             throw new IOException("world.bin has the wrong header");
         }
         double sx = r.f64(), sy = r.f64(), tx = r.f64(), ty = r.f64();
@@ -143,6 +143,7 @@ final class World {
             c.name = r.text();
             int flags = r.u8();
             c.quizzable = (flags & 1) != 0;
+            c.fame = r.u8();
             c.code = r.text();
             c.sovereign = r.text();
             c.aliases = new String[r.uvar()];

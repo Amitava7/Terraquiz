@@ -15,6 +15,7 @@ final class Country {
     String[] facts;
     String[] hints;
     boolean quizzable;    // sovereign states we ask about
+    int fame;             // 0 = hardest to miss, 255 = not asked about
 
     float labelX, labelY;
     final RectF bounds = new RectF();      // everything, incl. far-flung islands
